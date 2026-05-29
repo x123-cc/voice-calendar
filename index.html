@@ -1,0 +1,250 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+    <title>语音日历</title>
+    <!-- FullCalendar 样式 -->
+    <link href='https://cdn.jsdelivr.net/npm/fullcalendar@6.1.15/index.global.min.css' rel='stylesheet' />
+    <script src='https://cdn.jsdelivr.net/npm/fullcalendar@6.1.15/index.global.min.js'></script>
+    <style>
+        body { font-family: Arial, sans-serif; max-width: 1200px; margin: 0 auto; padding: 20px; background: #f5f7fa; }
+        .header { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 15px; margin-bottom: 20px; }
+        h1 { margin: 0; }
+        button { background: #4a90e2; color: white; border: none; padding: 12px 24px; font-size: 16px; border-radius: 40px; cursor: pointer; transition: 0.2s; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
+        button:hover { background: #357abd; }
+        button:active { transform: scale(0.97); }
+        #status { background: #e9ecef; padding: 12px; border-radius: 12px; margin: 15px 0; font-size: 14px; color: #2c3e50; }
+        #calendar { background: white; border-radius: 16px; padding: 10px; box-shadow: 0 2px 8px rgba(0,0,0,0.05); }
+        .note { font-size: 12px; color: #666; margin-top: 20px; text-align: center; }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>🗣️ 语音日历</h1>
+        <button id="micBtn">🎤 开始说话</button>
+    </div>
+    <div id="status">✅ 准备就绪，点击麦克风按钮，说出指令如“明天下午3点开会”</div>
+    <div id="calendar"></div>
+    <div class="note">💡 支持指令：添加/删除/查看。删除请说“删除明天的会议” | 数据保存在浏览器本地</div>
+
+    <script>
+        // ---------- 配置 ----------
+        // 请在这里填入你的 DeepSeek API Key
+        const DEEPSEEK_API_KEY = "sk-f41d7e959d4345e4ab3012f777adaee9";
+        const API_URL = "https://api.deepseek.com/v1/chat/completions";
+
+        // 初始化日历变量
+        let calendar = null;
+
+        // ---------- 本地存储管理事件 ----------
+        function getEvents() {
+            const stored = localStorage.getItem("voice_calendar_events");
+            if (stored) return JSON.parse(stored);
+            return []; // 空数组
+        }
+
+        function saveEvents(events) {
+            localStorage.setItem("voice_calendar_events", JSON.stringify(events));
+        }
+
+        // 添加事件
+        function addEvent(eventData) {
+            const events = getEvents();
+            const newEvent = {
+                id: Date.now().toString(),
+                title: eventData.title || "无标题",
+                start: eventData.start,   // ISO 字符串，如 "2026-05-30T15:00:00"
+                end: eventData.end,
+                description: eventData.description || ""
+            };
+            events.push(newEvent);
+            saveEvents(events);
+            refreshCalendar();
+            return newEvent;
+        }
+
+        // 删除事件 (按标题关键词或时间)
+        function deleteEvent(query) {
+            let events = getEvents();
+            const beforeCount = events.length;
+            // 简单实现：如果query是日期，删除那天所有事件；否则删除标题包含query的事件
+            if (query.match(/\d{4}-\d{2}-\d{2}/)) {
+                // 删除指定日期所有事件
+                const targetDate = query.slice(0,10);
+                events = events.filter(ev => ev.start.slice(0,10) !== targetDate);
+            } else {
+                // 删除标题包含关键词的事件
+                events = events.filter(ev => !ev.title.includes(query));
+            }
+            saveEvents(events);
+            refreshCalendar();
+            return beforeCount - events.length; // 返回删除数量
+        }
+
+        // 查询事件 (返回今天或指定范围)
+        function queryEvents(timeStr) {
+            const events = getEvents();
+            // 如果timeStr是日期，返回当天事件；否则返回最近7天
+            let targetDate = null;
+            if (timeStr && timeStr.match(/\d{4}-\d{2}-\d{2}/)) targetDate = timeStr.slice(0,10);
+            const result = events.filter(ev => {
+                if (targetDate) return ev.start.slice(0,10) === targetDate;
+                // 默认最近7天
+                const now = new Date();
+                const sevenDaysLater = new Date(now.getTime() + 7*24*3600*1000);
+                const evDate = new Date(ev.start);
+                return evDate >= now && evDate <= sevenDaysLater;
+            });
+            return result;
+        }
+
+        // 刷新FullCalendar显示
+        function refreshCalendar() {
+            if (calendar) {
+                const events = getEvents().map(ev => ({
+                    id: ev.id,
+                    title: ev.title,
+                    start: ev.start,
+                    end: ev.end,
+                    description: ev.description
+                }));
+                calendar.removeAllEvents();
+                calendar.addEventSource(events);
+            }
+        }
+
+        // ---------- 调用 DeepSeek 解析用户语音文字 ----------
+        async function parseUserIntent(userText) {
+            const systemPrompt = `你是一个日历助手，负责解析用户的日历操作指令。请输出JSON格式，不要输出其他内容。
+            JSON格式：
+            {
+                "action": "add" 或 "delete" 或 "query",
+                "event": {
+                    "title": "事件标题",
+                    "start": "ISO日期时间字符串 (例如 2026-05-30T15:00:00)",
+                    "end": "可选结束时间",
+                    "description": "可选备注"
+                },
+                "query": "如果是删除或查询，这里填日期或关键词"
+            }
+            当前日期是 ${new Date().toISOString().slice(0,10)}。理解中文日期如“明天下午3点”转成具体ISO时间。如果没有结束时间，end设为start后1小时。`;
+            
+            try {
+                const response = await fetch(API_URL, {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json",
+                        "Authorization": `Bearer ${DEEPSEEK_API_KEY}`
+                    },
+                    body: JSON.stringify({
+                        model: "deepseek-chat",
+                        messages: [
+                            { role: "system", content: systemPrompt },
+                            { role: "user", content: userText }
+                        ],
+                        temperature: 0,
+                        response_format: { type: "json_object" }
+                    })
+                });
+                const data = await response.json();
+                const content = data.choices[0].message.content;
+                return JSON.parse(content);
+            } catch (err) {
+                console.error("解析失败", err);
+                return { action: "error", message: "AI解析出错" };
+            }
+        }
+
+        // 执行具体操作
+        async function executeCommand(userText) {
+            const parsed = await parseUserIntent(userText);
+            if (parsed.action === "add" && parsed.event && parsed.event.start) {
+                const ev = addEvent(parsed.event);
+                return `已添加事件：${ev.title} 于 ${ev.start.slice(0,16)}`;
+            } else if (parsed.action === "delete") {
+                const keyword = parsed.query || userText;
+                const deletedCount = deleteEvent(keyword);
+                return deletedCount > 0 ? `已删除 ${deletedCount} 个相关事件` : "没有找到匹配的事件，未删除任何内容";
+            } else if (parsed.action === "query") {
+                const events = queryEvents(parsed.query);
+                if (events.length === 0) return "没有找到相关事件";
+                let msg = `找到 ${events.length} 个事件：\n`;
+                events.forEach(ev => msg += `• ${ev.title} 于 ${ev.start.slice(0,16)}\n`);
+                return msg;
+            } else {
+                return "抱歉，我没能理解你的指令，请试试说：明天下午3点开会";
+            }
+        }
+
+        // ---------- 语音相关 (Web Speech API) ----------
+        let recognition = null;
+        if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
+            const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+            recognition = new SpeechRecognition();
+            recognition.lang = 'zh-CN';
+            recognition.continuous = false;
+            recognition.interimResults = false;
+        } else {
+            alert("您的浏览器不支持语音识别，请使用Chrome、Edge等现代浏览器。");
+        }
+
+        document.getElementById("micBtn").addEventListener("click", () => {
+            if (!recognition) {
+                alert("浏览器不支持语音识别");
+                return;
+            }
+            recognition.start();
+            document.getElementById("status").innerHTML = "🎙️ 正在倾听... 请说话";
+            document.getElementById("status").style.background = "#fff3cd";
+        });
+
+        recognition.onresult = async (event) => {
+            const last = event.results.length - 1;
+            const text = event.results[last][0].transcript;
+            document.getElementById("status").innerHTML = `📝 识别到：${text}<br>⏳ 正在处理...`;
+            document.getElementById("status").style.background = "#e9ecef";
+            
+            // 调用大模型解析并执行
+            const reply = await executeCommand(text);
+            // 语音反馈
+            const utterance = new SpeechSynthesisUtterance(reply);
+            utterance.lang = 'zh-CN';
+            window.speechSynthesis.cancel(); // 避免堆积
+            window.speechSynthesis.speak(utterance);
+            
+            document.getElementById("status").innerHTML = `✅ ${reply}`;
+        };
+
+        recognition.onerror = (event) => {
+            document.getElementById("status").innerHTML = `❌ 语音识别错误：${event.error}`;
+            document.getElementById("status").style.background = "#f8d7da";
+        };
+
+        recognition.onend = () => {
+            // 自动结束，无需额外操作
+        };
+
+        // ---------- 初始化日历 ----------
+        document.addEventListener('DOMContentLoaded', function() {
+            const calendarEl = document.getElementById('calendar');
+            calendar = new FullCalendar.Calendar(calendarEl, {
+                initialView: 'dayGridMonth',
+                headerToolbar: {
+                    left: 'prev,next today',
+                    center: 'title',
+                    right: 'dayGridMonth,timeGridWeek'
+                },
+                locale: 'zh-cn',
+                events: getEvents().map(ev => ({
+                    id: ev.id,
+                    title: ev.title,
+                    start: ev.start,
+                    end: ev.end,
+                }))
+            });
+            calendar.render();
+        });
+    </script>
+</body>
+</html>

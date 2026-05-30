@@ -4,14 +4,11 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
     <title>语音时间轴 - 智能时间记录与分析</title>
-    <!-- FullCalendar 样式 + Chart.js -->
     <link href='https://cdn.jsdelivr.net/npm/fullcalendar@6.1.15/index.global.min.css' rel='stylesheet' />
     <script src='https://cdn.jsdelivr.net/npm/fullcalendar@6.1.15/index.global.min.js'></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
     <style>
-        * {
-            box-sizing: border-box;
-        }
+        * { box-sizing: border-box; }
         body {
             font-family: system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif;
             max-width: 1400px;
@@ -20,10 +17,7 @@
             background: #f8fafc;
             color: #0f172a;
         }
-        h1, h2, h3 {
-            margin: 0 0 0.5rem 0;
-            font-weight: 600;
-        }
+        h1, h2, h3 { margin: 0 0 0.5rem 0; font-weight: 600; }
         .header {
             display: flex;
             align-items: center;
@@ -49,16 +43,9 @@
             transition: 0.2s;
             box-shadow: 0 1px 2px rgba(0,0,0,0.05);
         }
-        button:hover {
-            background: #2563eb;
-            transform: scale(0.97);
-        }
-        .secondary-btn {
-            background: #64748b;
-        }
-        .secondary-btn:hover {
-            background: #475569;
-        }
+        button:hover { background: #2563eb; transform: scale(0.97); }
+        .secondary-btn { background: #64748b; }
+        .secondary-btn:hover { background: #475569; }
         .status-card {
             background: #eef2ff;
             padding: 12px 16px;
@@ -66,7 +53,6 @@
             margin: 15px 0;
             font-size: 14px;
             border-left: 4px solid #3b82f6;
-            box-shadow: 0 1px 2px rgba(0,0,0,0.03);
         }
         .two-columns {
             display: flex;
@@ -74,10 +60,7 @@
             gap: 24px;
             margin-top: 20px;
         }
-        .calendar-col {
-            flex: 2;
-            min-width: 280px;
-        }
+        .calendar-col { flex: 2; min-width: 280px; }
         .timeline-col {
             flex: 1.2;
             min-width: 280px;
@@ -86,23 +69,22 @@
             padding: 16px;
             box-shadow: 0 4px 12px rgba(0,0,0,0.05);
         }
+        .timeline-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 12px;
+        }
         .timeline-item {
             border-left: 3px solid #3b82f6;
             padding: 8px 12px;
             margin-bottom: 12px;
             background: #f8fafc;
             border-radius: 12px;
-            transition: 0.1s;
+            position: relative;
         }
-        .timeline-time {
-            font-size: 12px;
-            color: #475569;
-            font-weight: 500;
-        }
-        .timeline-title {
-            font-weight: 600;
-            margin: 4px 0 2px;
-        }
+        .timeline-time { font-size: 12px; color: #475569; font-weight: 500; }
+        .timeline-title { font-weight: 600; margin: 4px 0 2px; }
         .timeline-cat {
             display: inline-block;
             font-size: 10px;
@@ -120,16 +102,29 @@
             display: inline-block;
             margin-left: 6px;
         }
+        .event-actions {
+            float: right;
+            display: flex;
+            gap: 8px;
+        }
+        .event-actions button {
+            background: white;
+            border: 1px solid #cbd5e1;
+            font-size: 14px;
+            cursor: pointer;
+            padding: 2px 8px;
+            border-radius: 20px;
+            box-shadow: none;
+            color: #334155;
+        }
+        .event-actions button:hover { background: #e2e8f0; transform: none; border-color: #94a3b8; }
         .report-box {
             margin-top: 24px;
             background: #f1f5f9;
             border-radius: 20px;
             padding: 16px;
         }
-        canvas {
-            max-height: 200px;
-            margin: 10px auto;
-        }
+        canvas { max-height: 200px; margin: 10px auto; }
         .footer-note {
             font-size: 12px;
             text-align: center;
@@ -141,6 +136,7 @@
         @media (max-width: 800px) {
             body { padding: 12px; }
             button { padding: 8px 14px; font-size: 12px; }
+            .event-actions button { padding: 2px 6px; font-size: 12px; }
         }
     </style>
 </head>
@@ -149,7 +145,7 @@
 <div class="header">
     <div>
         <h1>🗣️ 语音时间轴</h1>
-        <p style="margin:0; color:#475569;">记录过去 · 安排未来 · 看见你的时间</p>
+        <p style="margin:0; color:#475569;">记录过去 · 安排未来 · 复用日程 · 智能联想 · 冲突检测 · 点击日期查看</p>
     </div>
     <div class="btn-group">
         <button id="micBtn">🎤 语音添加</button>
@@ -159,16 +155,20 @@
     </div>
 </div>
 
-<div id="status" class="status-card">✅ 准备就绪。点击🎤，说出例如：“早上8点到9点学语文”，“现在开始写作业”，“明天下午3点开会”，“今天中午12点吃饭”</div>
+<div id="status" class="status-card">✅ 准备就绪。点击🎤，说出例如：“早上8点到9点学语文”，“现在开始写作业”，“明天下午3点开会”</div>
 
 <div class="two-columns">
     <div class="calendar-col">
         <div id="calendar"></div>
     </div>
     <div class="timeline-col">
-        <h3>📋 今日时间轴</h3>
+        <div class="timeline-header">
+            <h3 id="timelineTitle">📋 今日时间轴</h3>
+            <button id="repeatDayBtn" class="secondary-btn" style="padding: 4px 12px; font-size: 12px;">📋 复用今日全部</button>
+            <button id="goTodayBtn" class="secondary-btn" style="padding: 4px 12px; font-size: 12px; margin-left: 8px;">📅 今天</button>
+        </div>
         <div id="timelineList" style="max-height: 400px; overflow-y: auto;">
-            <div class="timeline-item">暂无记录，试试语音添加～</div>
+            <div class="timeline-item">✨ 点击日历上的任意日期查看日程～</div>
         </div>
         <div id="reportContainer" class="report-box" style="display: none;">
             <h3>📊 时间分析报表</h3>
@@ -178,21 +178,75 @@
     </div>
 </div>
 <div class="footer-note">
-    💡 支持指令：添加/删除/查看 | 自动分类学习/工作/娱乐/生活/其他 | 说“今天做了什么”或点“今日报表”生成智能日报
+    💡 支持指令：添加/删除/查看 | 自动分类 | 点击事件右侧「↻」可复用单事件 | 智能联想：添加“拔智齿”等事件后询问关联提醒 | 时间冲突时会提示
 </div>
 
 <script>
     // ---------- 配置 ----------
-    // 请在这里填入你的 DeepSeek API Key 
-    const DEEPSEEK_API_KEY = "sk-f41d7e959d4345e4ab3012f777adaee9"; 
+    const DEEPSEEK_API_KEY = "sk-f41d7e959d4345e4ab3012f777adaee9";   // 请替换为真实Key
     const API_URL = "https://api.deepseek.com/v1/chat/completions";
 
-    // 全局变量
     let calendar = null;
-    let currentChart = null;     // Chart.js实例
-    let ongoingEvent = null;     // 当前正在进行的事件 { id, title, start, category }
+    let currentChart = null;
+    let ongoingEvent = null;
+    let currentSelectedDate = null;
 
-    // ---------- 本地存储管理 ----------
+    // ---------- 辅助函数 ----------
+    function getCategoryColor(cat) {
+        const map = { "学习":"#3b82f6", "工作":"#ef4444", "娱乐":"#f59e0b", "生活":"#10b981", "其他":"#8b5cf6" };
+        return map[cat] || "#64748b";
+    }
+
+    function escapeHtml(str) { 
+        return str.replace(/[&<>]/g, function(m){
+            if(m==='&') return '&amp;';
+            if(m==='<') return '&lt;';
+            if(m==='>') return '&gt;';
+            return m;
+        });
+    }
+
+    function speakText(text) { 
+        const utter = new SpeechSynthesisUtterance(text); 
+        utter.lang='zh-CN'; 
+        window.speechSynthesis.cancel(); 
+        window.speechSynthesis.speak(utter); 
+    }
+
+    function updateStatus(msg, temp=false) {
+        const div = document.getElementById("status");
+        if (!div) return;
+        div.innerHTML = `📢 ${msg}`;
+        if (!temp) setTimeout(()=>{ if(div.innerHTML===`📢 ${msg}`) div.innerHTML="✅ 就绪，随时语音~"; }, 4000);
+    }
+
+    function formatDateYMD(date) {
+        const d = new Date(date);
+        return d.toISOString().slice(0,10);
+    }
+
+    // ---------- 冲突检测 ----------
+    function getConflicts(newEvent, existingEvents) {
+        const newStart = new Date(newEvent.start);
+        const newEnd = new Date(newEvent.end);
+        return existingEvents.filter(ev => {
+            const evStart = new Date(ev.start);
+            const evEnd = new Date(ev.end);
+            return (newStart < evEnd && newEnd > evStart);
+        });
+    }
+
+    async function confirmAddWithConflict(conflicts, eventTitle) {
+        if (conflicts.length === 0) return true;
+        let msg = `⚠️ 时间冲突！事件“${eventTitle}”与以下事件重叠：\n`;
+        conflicts.forEach(c => {
+            msg += `• ${c.title} (${new Date(c.start).toLocaleTimeString()} - ${new Date(c.end).toLocaleTimeString()})\n`;
+        });
+        msg += `\n是否仍然添加？`;
+        return confirm(msg);
+    }
+
+    // ---------- 本地存储 ----------
     function getEvents() {
         const stored = localStorage.getItem("voice_timeline_events");
         if (stored) return JSON.parse(stored);
@@ -201,37 +255,57 @@
 
     function saveEvents(events) {
         localStorage.setItem("voice_timeline_events", JSON.stringify(events));
-        refreshCalendar();
-        renderTodayTimeline();
+        if (calendar) {
+            const calEvents = events.map(ev => ({
+                id: ev.id, 
+                title: `[${ev.category}] ${ev.title}`, 
+                start: ev.start, 
+                end: ev.end,
+                color: getCategoryColor(ev.category)
+            }));
+            calendar.removeAllEvents();
+            calendar.addEventSource(calEvents);
+        }
+        if (currentSelectedDate) {
+            renderTimelineForDate(currentSelectedDate);
+        }
+        updateTimelineTitle();
     }
 
-    // 添加事件 (支持未来/过去/ongoing)
-    function addEvent(eventData) {
+    async function addEvent(eventData, skipConflictCheck = false) {
         const events = getEvents();
         const newEvent = {
             id: Date.now().toString() + Math.random().toString(36).substr(2, 4),
             title: eventData.title || "无标题",
-            start: eventData.start,   // ISO string
+            start: eventData.start,
             end: eventData.end || new Date(new Date(eventData.start).getTime() + 3600000).toISOString(),
             category: eventData.category || "其他",
             recordedAt: new Date().toISOString(),
-            status: "completed"       // completed | pending
+            status: "completed"
         };
-        // 规范化：保证结束时间大于开始时间
         if (new Date(newEvent.end) <= new Date(newEvent.start)) {
             newEvent.end = new Date(new Date(newEvent.start).getTime() + 3600000).toISOString();
         }
+
+        if (!skipConflictCheck) {
+            const conflicts = getConflicts(newEvent, events);
+            const ok = await confirmAddWithConflict(conflicts, newEvent.title);
+            if (!ok) return null;
+        }
+
         events.push(newEvent);
         saveEvents(events);
         return newEvent;
     }
 
-    // 删除事件 (按id或关键词)
-    function deleteEventById(eventId) {
+    function deleteEventById(id) {
         let events = getEvents();
-        const newEvents = events.filter(ev => ev.id !== eventId);
-        saveEvents(newEvents);
-        return events.length !== newEvents.length;
+        const newEvents = events.filter(ev => ev.id !== id);
+        if (newEvents.length !== events.length) {
+            saveEvents(newEvents);
+            return true;
+        }
+        return false;
     }
 
     function deleteEventsByKeyword(keyword) {
@@ -241,45 +315,98 @@
         return events.length - filtered.length;
     }
 
-    // 查询事件 (日期范围)
-    function getEventsForDateRange(startDate, endDate) {
+    async function repeatEvent(eventId, days) {
         const events = getEvents();
-        const start = new Date(startDate);
-        const end = new Date(endDate);
-        return events.filter(ev => {
-            const evStart = new Date(ev.start);
-            return evStart >= start && evStart <= end;
-        });
-    }
-
-    // 刷新日历 & 时间轴
-    function refreshCalendar() {
-        if (calendar) {
-            const events = getEvents().map(ev => ({
-                id: ev.id,
-                title: `[${ev.category}] ${ev.title}`,
-                start: ev.start,
-                end: ev.end,
-                color: getCategoryColor(ev.category)
-            }));
-            calendar.removeAllEvents();
-            calendar.addEventSource(events);
+        const original = events.find(ev => ev.id === eventId);
+        if (!original) return false;
+        const startDate = new Date(original.start);
+        const endDate = new Date(original.end);
+        const duration = endDate - startDate;
+        const newEventsToAdd = [];
+        for (let i = 1; i <= days; i++) {
+            const newStart = new Date(startDate.getTime() + i * 86400000);
+            const newEnd = new Date(newStart.getTime() + duration);
+            const newEvent = {
+                ...original,
+                id: Date.now().toString() + Math.random().toString(36).substr(2, 4),
+                start: newStart.toISOString(),
+                end: newEnd.toISOString(),
+                recordedAt: new Date().toISOString()
+            };
+            newEventsToAdd.push(newEvent);
         }
-        renderTodayTimeline();
+        let allConflicts = [];
+        for (const ne of newEventsToAdd) {
+            const conflicts = getConflicts(ne, events);
+            if (conflicts.length) {
+                allConflicts.push({ event: ne, conflicts });
+            }
+        }
+        if (allConflicts.length > 0) {
+            let msg = `⚠️ 复用将产生 ${allConflicts.length} 个冲突事件，例如：\n`;
+            allConflicts.slice(0, 3).forEach(c => {
+                msg += `• “${c.event.title}” 于 ${new Date(c.event.start).toLocaleString()} 与已有事件冲突\n`;
+            });
+            msg += `\n是否仍然全部添加？`;
+            if (!confirm(msg)) return false;
+        }
+        for (const ne of newEventsToAdd) {
+            events.push(ne);
+        }
+        saveEvents(events);
+        return true;
     }
 
-    function getCategoryColor(cat) {
-        const map = { "学习": "#3b82f6", "工作": "#ef4444", "娱乐": "#f59e0b", "生活": "#10b981", "其他": "#8b5cf6" };
-        return map[cat] || "#64748b";
+    async function repeatWholeDay(sourceDateStr, targetDateStr, days) {
+        const events = getEvents();
+        const sourceEvents = events.filter(ev => ev.start.startsWith(sourceDateStr));
+        if (sourceEvents.length === 0) return false;
+        const targetStart = new Date(targetDateStr);
+        const newEventsToAdd = [];
+        for (let offset = 0; offset < days; offset++) {
+            const currentTarget = new Date(targetStart.getTime() + offset * 86400000);
+            sourceEvents.forEach(orig => {
+                const origStart = new Date(orig.start);
+                const origEnd = new Date(orig.end);
+                const duration = origEnd - origStart;
+                const timeOffset = origStart - new Date(sourceDateStr).getTime();
+                const newStart = new Date(currentTarget.getTime() + timeOffset);
+                const newEnd = new Date(newStart.getTime() + duration);
+                const newEvent = {
+                    ...orig,
+                    id: Date.now().toString() + Math.random().toString(36).substr(2, 4),
+                    start: newStart.toISOString(),
+                    end: newEnd.toISOString(),
+                    recordedAt: new Date().toISOString()
+                };
+                newEventsToAdd.push(newEvent);
+            });
+        }
+        let conflictCount = 0;
+        for (const ne of newEventsToAdd) {
+            const conflicts = getConflicts(ne, events);
+            if (conflicts.length) conflictCount++;
+        }
+        if (conflictCount > 0) {
+            if (!confirm(`⚠️ 整日复用将产生 ${conflictCount} 个冲突事件，是否仍然全部添加？`)) {
+                return false;
+            }
+        }
+        for (const ne of newEventsToAdd) {
+            events.push(ne);
+        }
+        saveEvents(events);
+        return true;
     }
 
-    // 渲染今日时间轴
-    function renderTodayTimeline() {
-        const todayStr = new Date().toISOString().slice(0,10);
-        const events = getEvents().filter(ev => ev.start.startsWith(todayStr)).sort((a,b)=>new Date(a.start)-new Date(b.start));
+    function renderTimelineForDate(dateStr) {
+        const events = getEvents()
+            .filter(ev => ev.start.startsWith(dateStr))
+            .sort((a,b) => new Date(a.start) - new Date(b.start));
         const container = document.getElementById("timelineList");
+        if (!container) return;
         if (!events.length) {
-            container.innerHTML = `<div class="timeline-item">✨ 今天还没有记录，试试说“早上9点学英语”</div>`;
+            container.innerHTML = `<div class="timeline-item">✨ ${dateStr} 没有记录，试试语音添加～</div>`;
             return;
         }
         container.innerHTML = events.map(ev => {
@@ -291,134 +418,158 @@
                     <div class="timeline-time">${startFmt} - ${endFmt} ${isOngoing ? '<span class="ongoing-badge">进行中</span>' : ''}</div>
                     <div class="timeline-title">${escapeHtml(ev.title)}</div>
                     <span class="timeline-cat">${ev.category}</span>
-                    <button style="float:right; background:none; border:none; color:#ef4444; cursor:pointer; font-size:12px;" onclick="window.deleteEventByIdUi('${ev.id}')">🗑️</button>
+                    <div class="event-actions">
+                        <button onclick="window.repeatEventUi('${ev.id}')" title="复用此事件">↻ 复用</button>
+                        <button onclick="window.deleteEventByIdUi('${ev.id}')" title="删除">🗑️ 删除</button>
+                    </div>
                     <div style="clear:both"></div>
                 </div>
             `;
         }).join('');
     }
 
-    window.deleteEventByIdUi = function(id) {
-        if (confirm("删除这条记录？")) {
-            deleteEventById(id);
-            renderTodayTimeline();
-            refreshCalendar();
-            updateStatus("已删除事件", false);
-        }
-    };
-
-    // 智能解析 + 分类 (调用DeepSeek)
-    async function parseUserIntent(userText) {
-        const systemPrompt = `你是智能时间记录助手。用户会描述一个事件，你需要解析出动作类型、事件标题、时间、类别。
-当前日期时间：${new Date().toISOString()}。
-请输出JSON，不要有其他文字。
-动作类型(action)可以是: "add" (添加事件), "query" (查询报表), "start_ongoing" (开始一个进行中事件), "end_ongoing" (结束当前任务), "delete" (删除), "report_today" (今日报表), "report_week" (本周报表).
-事件类别(category)从["学习","工作","娱乐","生活","其他"]中选择。
-对于add: 需要 title, start (ISO格式), end (可选, 若无则默认1小时后), category。
-对于start_ongoing: 需要 title, category, start(当前时间)。
-对于delete: 需要 keyword。
-注意理解相对时间如“今天早上8点” “现在” “明天下午3点”。如果用户说“现在开始xxx”，视为start_ongoing。输出示例:
-{"action":"add","event":{"title":"学语文","start":"2026-05-30T08:00:00","end":"2026-05-30T09:00:00","category":"学习"}}
-{"action":"start_ongoing","event":{"title":"写作业","category":"学习"}}
-{"action":"report_today":{}}
-`;
-
-        try {
-            const response = await fetch(API_URL, {
-                method: "POST",
-                headers: {
-                    "Content-Type": "application/json",
-                    "Authorization": `Bearer ${DEEPSEEK_API_KEY}`
-                },
-                body: JSON.stringify({
-                    model: "deepseek-chat",
-                    messages: [
-                        { role: "system", content: systemPrompt },
-                        { role: "user", content: userText }
-                    ],
-                    temperature: 0,
-                    response_format: { type: "json_object" }
-                })
-            });
-            const data = await response.json();
-            const content = data.choices[0].message.content;
-            return JSON.parse(content);
-        } catch (err) {
-            console.error("解析失败", err);
-            return { action: "error", message: "AI解析失败" };
+    function updateTimelineTitle() {
+        const titleEl = document.getElementById("timelineTitle");
+        if (titleEl) {
+            if (currentSelectedDate) {
+                titleEl.innerHTML = `📋 ${currentSelectedDate} 的时间轴`;
+            } else {
+                titleEl.innerHTML = `📋 时间轴`;
+            }
         }
     }
 
-    // 执行指令
+    window.repeatEventUi = async function(eventId) {
+        let days = prompt("请输入复用天数（1-30）：", "1");
+        days = parseInt(days, 10);
+        if (isNaN(days) || days < 1 || days > 30) { alert("请输入1-30之间的整数"); return; }
+        const success = await repeatEvent(eventId, days);
+        if (success) {
+            alert(`✅ 已复用至未来 ${days} 天`);
+            if (currentSelectedDate) renderTimelineForDate(currentSelectedDate);
+        } else { alert("复用失败或已取消"); }
+    };
+
+    window.deleteEventByIdUi = function(id) {
+        if (confirm("删除该事件？")) { 
+            if (deleteEventById(id)) {
+                if (currentSelectedDate) renderTimelineForDate(currentSelectedDate);
+            } else {
+                alert("删除失败");
+            }
+        }
+    };
+
+    async function askForFollowUp(eventTitle, eventStart, eventCategory) {
+        const now = new Date();
+        if (new Date(eventStart) <= now) return;
+        const keywords = ["拔智齿", "手术", "吃药", "复诊", "开会", "面试", "考试"];
+        const matched = keywords.some(kw => eventTitle.includes(kw));
+        if (!matched) return;
+
+        const prompt = `用户添加了事件：“${eventTitle}”，类别：${eventCategory}，时间：${new Date(eventStart).toLocaleString()}。是否应该提醒用户设置一个关联的后续事件？如果需要，请返回一个简短的问题询问用户，例如“需要添加用药提醒吗？”如果不需要，返回“无”。`;
+        try {
+            const response = await fetch(API_URL, {
+                method: "POST",
+                headers: { "Content-Type": "application/json", "Authorization": `Bearer ${DEEPSEEK_API_KEY}` },
+                body: JSON.stringify({
+                    model: "deepseek-chat",
+                    messages: [{ role: "user", content: prompt }],
+                    temperature: 0.5
+                })
+            });
+            const data = await response.json();
+            const question = data.choices[0].message.content;
+            if (question && question !== "无" && question.trim().length > 0) {
+                const userConfirm = confirm(`🤖 智能联想：${question}\n\n点击“确定”自动添加关联提醒，“取消”忽略。`);
+                if (userConfirm) {
+                    const followStart = new Date(new Date(eventStart).getTime() + 86400000);
+                    const followEvent = {
+                        title: `${eventTitle} 的提醒`,
+                        start: followStart.toISOString(),
+                        end: new Date(followStart.getTime() + 3600000).toISOString(),
+                        category: "生活"
+                    };
+                    await addEvent(followEvent, false);
+                    speakText(`已自动添加提醒：${followEvent.title}`);
+                    updateStatus(`💡 已添加关联提醒：${followEvent.title}`, true);
+                    if (currentSelectedDate === formatDateYMD(followStart)) {
+                        renderTimelineForDate(currentSelectedDate);
+                    }
+                }
+            }
+        } catch(e) { console.error("联想失败", e); }
+    }
+
+    async function parseUserIntent(userText) {
+        const systemPrompt = `你是智能时间记录助手。用户会描述一个事件，解析动作类型、标题、时间、类别。
+当前时间：${new Date().toISOString()}。
+输出JSON，无其他文字。
+动作类型(action): "add", "query", "start_ongoing", "end_ongoing", "delete", "report_today", "report_week".
+类别从["学习","工作","娱乐","生活","其他"]选。
+对于add: 需要 title, start(ISO), end(可选), category。
+对于start_ongoing: 需要 title, category。
+对于delete: 需要 keyword。
+示例: {"action":"add","event":{"title":"学语文","start":"2026-05-30T08:00:00","end":"2026-05-30T09:00:00","category":"学习"}}`;
+        try {
+            const res = await fetch(API_URL, {
+                method: "POST",
+                headers: { "Content-Type": "application/json", "Authorization": `Bearer ${DEEPSEEK_API_KEY}` },
+                body: JSON.stringify({ model: "deepseek-chat", messages: [{ role: "system", content: systemPrompt }, { role: "user", content: userText }], temperature: 0 })
+            });
+            const data = await res.json();
+            return JSON.parse(data.choices[0].message.content);
+        } catch(e) { return { action: "error", message: "解析失败" }; }
+    }
+
     async function executeCommand(userText) {
         const lower = userText.toLowerCase();
-        // 快捷指令
-        if (lower.includes("今天做了什么") || lower.includes("今日报表") || lower.includes("今天总结")) {
-            return await generateAndShowReport("today");
-        }
-        if (lower.includes("本周报表") || lower.includes("这周总结") || lower.includes("周报")) {
-            return await generateAndShowReport("week");
-        }
-        if (lower.includes("结束当前") || lower.includes("结束任务") || (ongoingEvent && (lower.includes("结束") || lower.includes("停止")))) {
-            return await endOngoingTask();
-        }
+        if (lower.includes("今天做了什么") || lower.includes("今日报表")) return await generateAndShowReport("today");
+        if (lower.includes("本周报表") || lower.includes("周报")) return await generateAndShowReport("week");
+        if (lower.includes("结束当前") || (ongoingEvent && (lower.includes("结束") || lower.includes("停止")))) return await endOngoingTask();
 
         const parsed = await parseUserIntent(userText);
         if (parsed.action === "add" && parsed.event && parsed.event.start) {
-            const ev = addEvent(parsed.event);
-            return `✅ 已添加：${ev.title} (${ev.category}) 从 ${new Date(ev.start).toLocaleString()} 到 ${new Date(ev.end).toLocaleTimeString()}`;
-        } 
-        else if (parsed.action === "start_ongoing") {
-            if (ongoingEvent) {
-                return `⚠️ 已有进行中的任务“${ongoingEvent.title}”，请先结束它。`;
+            const ev = await addEvent(parsed.event, false);
+            if (!ev) return "❌ 添加已取消（时间冲突）";
+            await askForFollowUp(ev.title, ev.start, ev.category);
+            const eventDate = formatDateYMD(ev.start);
+            if (currentSelectedDate === eventDate) {
+                renderTimelineForDate(currentSelectedDate);
             }
-            const now = new Date().toISOString();
-            const newOngoing = {
-                id: "ongoing_" + Date.now(),
-                title: parsed.event.title,
-                start: now,
-                category: parsed.event.category || "其他",
-                status: "ongoing"
-            };
-            ongoingEvent = newOngoing;
-            // 暂不存入本地，结束后再存
-            updateStatus(`🎯 开始记录：${ongoingEvent.title} (进行中)`, true);
-            return `开始记录“${ongoingEvent.title}”，完成后记得说“结束当前任务”。`;
-        }
-        else if (parsed.action === "delete" && parsed.keyword) {
+            return `✅ 已添加：${ev.title} (${ev.category}) ${new Date(ev.start).toLocaleString()}`;
+        } else if (parsed.action === "start_ongoing") {
+            if (ongoingEvent) return `⚠️ 已有进行中的任务“${ongoingEvent.title}”，请先结束。`;
+            ongoingEvent = { id: "ongoing_" + Date.now(), title: parsed.event.title, start: new Date().toISOString(), category: parsed.event.category || "其他" };
+            updateStatus(`🎯 开始记录：${ongoingEvent.title}`, true);
+            return `开始记录“${ongoingEvent.title}”，完成后说“结束当前任务”。`;
+        } else if (parsed.action === "delete" && parsed.keyword) {
             const cnt = deleteEventsByKeyword(parsed.keyword);
-            return cnt > 0 ? `🗑️ 删除了 ${cnt} 个包含“${parsed.keyword}”的事件` : "没有找到匹配的事件";
-        }
-        else if (parsed.action === "report_today") {
+            if (currentSelectedDate) renderTimelineForDate(currentSelectedDate);
+            return cnt > 0 ? `🗑️ 删除了 ${cnt} 个事件` : "未找到匹配事件";
+        } else if (parsed.action === "report_today") {
             return await generateAndShowReport("today");
-        }
-        else if (parsed.action === "report_week") {
+        } else if (parsed.action === "report_week") {
             return await generateAndShowReport("week");
-        }
-        else {
-            return "❓ 没听懂，试试说：“早上9点到10点学数学”或“现在开始写代码”或“今天做了什么”";
+        } else {
+            return "❓ 未理解，试试：“早上9点学数学”或“今天做了什么”";
         }
     }
 
     async function endOngoingTask() {
-        if (!ongoingEvent) {
-            return "当前没有进行中的任务。";
-        }
+        if (!ongoingEvent) return "当前没有进行中的任务。";
         const endTime = new Date().toISOString();
-        const completedEvent = {
-            title: ongoingEvent.title,
-            start: ongoingEvent.start,
-            end: endTime,
-            category: ongoingEvent.category
-        };
-        addEvent(completedEvent);
+        const completed = { title: ongoingEvent.title, start: ongoingEvent.start, end: endTime, category: ongoingEvent.category };
+        const ev = await addEvent(completed, false);
+        if (!ev) return "❌ 结束任务失败（时间冲突）";
         ongoingEvent = null;
-        updateStatus("✅ 已结束任务并保存记录", true);
-        renderTodayTimeline();
-        return `✅ “${completedEvent.title}” 已结束，记录已保存。`;
+        const eventDate = formatDateYMD(ev.start);
+        if (currentSelectedDate === eventDate) {
+            renderTimelineForDate(currentSelectedDate);
+        }
+        return `✅ “${completed.title}” 已结束并保存。`;
     }
 
-    // 生成报表（核心亮点）
     async function generateAndShowReport(type) {
         const now = new Date();
         let startDate, endDate, label;
@@ -427,7 +578,7 @@
             endDate = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1);
             label = "今日时间统计";
         } else {
-            const day = now.getDay(); // 周日=0
+            const day = now.getDay();
             const diffToMon = day === 0 ? 6 : day - 1;
             startDate = new Date(now);
             startDate.setDate(now.getDate() - diffToMon);
@@ -440,32 +591,24 @@
             const evStart = new Date(ev.start);
             return evStart >= startDate && evStart < endDate;
         });
-        // 按类别累计时长
         const stats = { "学习":0, "工作":0, "娱乐":0, "生活":0, "其他":0 };
         events.forEach(ev => {
-            const duration = (new Date(ev.end) - new Date(ev.start)) / (1000 * 3600);
-            if (duration > 0 && stats[ev.category] !== undefined) stats[ev.category] += duration;
+            const dur = (new Date(ev.end) - new Date(ev.start)) / 3600000;
+            if (dur > 0 && stats[ev.category] !== undefined) stats[ev.category] += dur;
         });
-        const totalHours = Object.values(stats).reduce((a,b)=>a+b,0);
-        // 调用AI生成文字洞察
-        const insight = await generateAIInsight(stats, totalHours, label);
-        // 显示报表区域 + 饼图
+        const total = Object.values(stats).reduce((a,b)=>a+b,0);
+        const insight = await generateAIInsight(stats, total, label);
         showReportUI(stats, insight, label);
-        // 返回语音播报
-        let spoken = `${label}，总记录时长${totalHours.toFixed(1)}小时。`;
-        for (let [cat, hours] of Object.entries(stats)) {
-            if (hours > 0) spoken += `${cat}${hours.toFixed(1)}小时，`;
-        }
-        return spoken + insight.slice(0, 100);
+        let spoken = `${label}，总时长${total.toFixed(1)}小时。`;
+        for (let [cat, h] of Object.entries(stats)) if (h>0) spoken += `${cat}${h.toFixed(1)}小时，`;
+        return spoken + insight.slice(0,100);
     }
 
     async function generateAIInsight(stats, total, periodLabel) {
-        const prompt = `根据以下时间统计数据生成一句鼓励或建议（20字以内）：${periodLabel} 总时长${total.toFixed(1)}小时，学习${stats.学习.toFixed(1)}，工作${stats.工作.toFixed(1)}，娱乐${stats.娱乐.toFixed(1)}，生活${stats.生活.toFixed(1)}。`;
         try {
             const res = await fetch(API_URL, {
-                method: "POST",
-                headers: { "Content-Type": "application/json", "Authorization": `Bearer ${DEEPSEEK_API_KEY}` },
-                body: JSON.stringify({ model: "deepseek-chat", messages: [{ role: "user", content: prompt }], temperature: 0.7 })
+                method: "POST", headers: { "Content-Type": "application/json", "Authorization": `Bearer ${DEEPSEEK_API_KEY}` },
+                body: JSON.stringify({ model: "deepseek-chat", messages: [{ role: "user", content: `${periodLabel}总时长${total.toFixed(1)}小时，学习${stats.学习.toFixed(1)}，工作${stats.工作.toFixed(1)}，娱乐${stats.娱乐.toFixed(1)}，生活${stats.生活.toFixed(1)}。生成一句建议（15字内）。` }], temperature: 0.7 })
             });
             const data = await res.json();
             return data.choices[0].message.content;
@@ -474,90 +617,139 @@
 
     function showReportUI(stats, insight, title) {
         const container = document.getElementById("reportContainer");
+        if (!container) return;
         container.style.display = "block";
         const ctx = document.getElementById('statsChart').getContext('2d');
         if (currentChart) currentChart.destroy();
+        const labels = Object.keys(stats).filter(k=>stats[k]>0);
+        const data = labels.map(k=>stats[k]);
         currentChart = new Chart(ctx, {
             type: 'pie',
-            data: {
-                labels: Object.keys(stats).filter(k=>stats[k]>0),
-                datasets: [{ data: Object.values(stats).filter(v=>v>0), backgroundColor: ['#3b82f6','#ef4444','#f59e0b','#10b981','#8b5cf6'] }]
-            },
-            options: { responsive: true, plugins: { legend: { position: 'top' } } }
+            data: { labels, datasets: [{ data, backgroundColor: ['#3b82f6','#ef4444','#f59e0b','#10b981','#8b5cf6'] }] },
+            options: { responsive: true }
         });
         document.getElementById("aiSummaryText").innerHTML = `💡 ${insight}`;
     }
 
-    // 辅助
-    function updateStatus(msg, isTemporary = false) {
-        const statusDiv = document.getElementById("status");
-        statusDiv.innerHTML = `📢 ${msg}`;
-        if (!isTemporary) setTimeout(() => { if(statusDiv.innerHTML === `📢 ${msg}`) statusDiv.innerHTML = "✅ 就绪，随时语音~"; }, 4000);
+    function initDemoData() {
+        if (localStorage.getItem("voice_timeline_events")) return;
+        const now = new Date();
+        const tomorrow = new Date(now.getTime() + 86400000);
+        const demoEvents = [
+            { title: "拔智齿", start: new Date(tomorrow.getFullYear(), tomorrow.getMonth(), tomorrow.getDate(), 10, 0).toISOString(), category: "生活" },
+            { title: "学语文", start: new Date(now.getFullYear(), now.getMonth(), now.getDate(), 8, 0).toISOString(), category: "学习" },
+            { title: "拼豆（娱乐）", start: new Date(now.getFullYear(), now.getMonth(), now.getDate(), 12, 0).toISOString(), category: "娱乐" },
+            { title: "团队周会", start: new Date(now.getFullYear(), now.getMonth(), now.getDate()+1, 14, 0).toISOString(), category: "工作" }
+        ];
+        const events = [];
+        for (const ev of demoEvents) {
+            events.push({
+                id: Date.now().toString() + Math.random().toString(36).substr(2, 4),
+                title: ev.title,
+                start: ev.start,
+                end: new Date(new Date(ev.start).getTime() + 3600000).toISOString(),
+                category: ev.category,
+                recordedAt: new Date().toISOString(),
+                status: "completed"
+            });
+        }
+        localStorage.setItem("voice_timeline_events", JSON.stringify(events));
     }
 
-    function speakText(text) {
-        const utterance = new SpeechSynthesisUtterance(text);
-        utterance.lang = 'zh-CN';
-        window.speechSynthesis.cancel();
-        window.speechSynthesis.speak(utterance);
-    }
-
-    function escapeHtml(str) { return str.replace(/[&<>]/g, function(m){if(m==='&') return '&amp;'; if(m==='<') return '&lt;'; if(m==='>') return '&gt;'; return m;}); }
-
-    // ---------- 语音交互 ----------
-    let recognition = null;
-    if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
-        const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-        recognition = new SpeechRecognition();
-        recognition.lang = 'zh-CN';
-        recognition.continuous = false;
-        recognition.interimResults = false;
-    } else {
-        alert("当前浏览器不支持语音识别，请使用Chrome/Edge/Safari。");
-    }
-
-    document.getElementById("micBtn").addEventListener("click", () => {
-        if (!recognition) { alert("不支持语音"); return; }
-        recognition.start();
-        document.getElementById("status").innerHTML = "🎙️ 倾听中... 请说话";
-    });
-    recognition.onresult = async (event) => {
-        const text = event.results[0][0].transcript;
-        document.getElementById("status").innerHTML = `📝 识别: ${text}<br>⏳ 智能处理中...`;
-        const reply = await executeCommand(text);
-        speakText(reply);
-        document.getElementById("status").innerHTML = `✅ ${reply}`;
-    };
-    recognition.onerror = (e) => { document.getElementById("status").innerHTML = `❌ 语音错误: ${e.error}`; };
-
-    // 按钮报表
-    document.getElementById("dailyReportBtn").onclick = async () => {
-        const reply = await generateAndShowReport("today");
-        speakText(reply);
-    };
-    document.getElementById("weeklyReportBtn").onclick = async () => {
-        const reply = await generateAndShowReport("week");
-        speakText(reply);
-    };
-    document.getElementById("endOngoingBtn").onclick = async () => {
-        const reply = await endOngoingTask();
-        speakText(reply);
-        updateStatus(reply, true);
-    };
-
-    // 初始化日历
+    // ---------- 启动所有逻辑 ----------
     document.addEventListener('DOMContentLoaded', () => {
+        initDemoData();
+
+        const micBtn = document.getElementById("micBtn");
+        const dailyReportBtn = document.getElementById("dailyReportBtn");
+        const weeklyReportBtn = document.getElementById("weeklyReportBtn");
+        const endOngoingBtn = document.getElementById("endOngoingBtn");
+        const repeatDayBtn = document.getElementById("repeatDayBtn");
+        const goTodayBtn = document.getElementById("goTodayBtn");
+
+        if (!micBtn || !dailyReportBtn || !weeklyReportBtn || !endOngoingBtn || !repeatDayBtn || !goTodayBtn) {
+            console.error("关键按钮未找到，请检查 HTML ID");
+            return;
+        }
+
         const calendarEl = document.getElementById('calendar');
+        if (!calendarEl) {
+            console.error("日历容器未找到");
+            return;
+        }
+
         calendar = new FullCalendar.Calendar(calendarEl, {
             initialView: 'dayGridMonth',
             headerToolbar: { left: 'prev,next today', center: 'title', right: 'dayGridMonth,timeGridWeek' },
             locale: 'zh-cn',
-            events: getEvents().map(ev => ({
-                id: ev.id, title: `[${ev.category}] ${ev.title}`, start: ev.start, end: ev.end, color: getCategoryColor(ev.category)
-            }))
+            dateClick: function(info) {
+                currentSelectedDate = info.dateStr;
+                renderTimelineForDate(currentSelectedDate);
+                updateTimelineTitle();
+            },
+            events: getEvents().map(ev => ({ id: ev.id, title: `[${ev.category}] ${ev.title}`, start: ev.start, end: ev.end, color: getCategoryColor(ev.category) }))
         });
         calendar.render();
-        renderTodayTimeline();
+
+        const today = formatDateYMD(new Date());
+        currentSelectedDate = today;
+        renderTimelineForDate(today);
+        updateTimelineTitle();
+
+        // 语音识别
+        let recognition = null;
+        if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
+            const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+            recognition = new SpeechRecognition();
+            recognition.lang = 'zh-CN';
+            recognition.continuous = false;
+            recognition.interimResults = false;
+        } else {
+            alert("当前浏览器不支持语音识别");
+        }
+
+        micBtn.addEventListener("click", () => {
+            if (!recognition) { alert("不支持语音"); return; }
+            recognition.start();
+            updateStatus("🎙️ 倾听中...", true);
+        });
+
+        recognition.onresult = async (event) => {
+            const text = event.results[0][0].transcript;
+            updateStatus(`📝 识别: ${text}<br>⏳ 处理中...`, true);
+            const reply = await executeCommand(text);
+            speakText(reply);
+            updateStatus(`✅ ${reply}`, false);
+        };
+        recognition.onerror = () => { updateStatus("❌ 语音错误", false); };
+
+        dailyReportBtn.onclick = async () => { const r = await generateAndShowReport("today"); speakText(r); };
+        weeklyReportBtn.onclick = async () => { const r = await generateAndShowReport("week"); speakText(r); };
+        endOngoingBtn.onclick = async () => { const r = await endOngoingTask(); speakText(r); updateStatus(r, true); };
+        repeatDayBtn.onclick = async () => {
+            if (!currentSelectedDate) {
+                alert("请先点击日历选择日期");
+                return;
+            }
+            const sourceDateStr = currentSelectedDate;
+            let targetDate = prompt("目标起始日期 (YYYY-MM-DD)：", new Date(new Date().getTime() + 86400000).toISOString().slice(0,10));
+            if (!targetDate) return;
+            let days = prompt("复用天数 (1-7)：", "1");
+            days = parseInt(days,10);
+            if (isNaN(days) || days<1 || days>7) { alert("请输入1-7"); return; }
+            const success = await repeatWholeDay(sourceDateStr, targetDate, days);
+            if (success) {
+                alert(`✅ 已将 ${sourceDateStr} 的全部事件复用至 ${targetDate} 开始的 ${days} 天`);
+                if (currentSelectedDate) renderTimelineForDate(currentSelectedDate);
+            } else { alert("复用失败或已取消"); }
+        };
+        goTodayBtn.onclick = () => {
+            const today = formatDateYMD(new Date());
+            currentSelectedDate = today;
+            renderTimelineForDate(today);
+            updateTimelineTitle();
+            if (calendar) calendar.today();
+        };
     });
 </script>
 </body>
